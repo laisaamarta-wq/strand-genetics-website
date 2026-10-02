@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Strand — genetic laboratory website concept
 
-## Getting Started
+An art-directed, motion-rich landing page for **Strand**, a fictional genetic testing laboratory.
+Editorial, Swiss-inspired layout on a strict 12-column grid, scroll-driven storytelling and
+custom imagery generated with Higgsfield.
 
-First, run the development server:
+**Concept, design & development:** Marta Jakovleva
+
+> Strand is not a real laboratory. The site offers no medical services and collects no data.
+
+## Stack
+
+Next.js 15 (App Router, static) · React 19 · TypeScript · Tailwind CSS 4 · Lenis (smooth scroll).
+No other runtime libraries, no environment variables, no backend.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+On a Mac you can also double-click `start-site.command`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start                      # serves the production build on :3000
+```
 
-## Learn More
+Deployed on Vercel with the default Next.js preset (install `npm install`, build `next build`,
+output `.next`). Every push to `main` triggers a new production deployment.
 
-To learn more about Next.js, take a look at the following resources:
+## Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Route | |
+|---|---|
+| `/` | Landing page: hero, approach, testing, science, process, about, perspective, call to action |
+| `/legal` | Privacy, terms, accessibility and credits |
+| `/sitemap.xml`, `/robots.txt` | Generated from `src/app` |
+| any other path | Custom 404 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Design system
 
-## Deploy on Vercel
+| | Desktop ≥1200 | Tablet 768–1199 | Mobile |
+|---|---|---|---|
+| Columns | 12 | 8 | 4 |
+| Gutter | 16px | 16px | 16px |
+| Margin | 40px | 24px | 16px |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+8px base unit. Type: Host Grotesk and IBM Plex Mono (both SIL OFL, self-hosted).
+Ink `#0C0C0D`, paper `#FFFFFF` / `#F4F4F2`, one accent, violet ash `#7A6F9B`, used only on interaction.
+Press **Shift + G** on the page to toggle the column grid overlay.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Structure
+
+```
+src/
+  app/            layout + metadata, page, legal, not-found, sitemap, robots, OG image, globals.css
+  content/        all copy (site.ts, legal.ts)
+  lib/images.ts   image registry + alt text
+  assets/images/  generated imagery, optimised WebP (~820 KB total)
+  fonts/          self-hosted woff2
+  components/
+    motion/       SmoothScroll (one scroll loop → CSS variables), hooks, Reveal/SplitLines, Interactions
+    sections/     Loader, Nav, Hero, Intro, Services, Science, Process, About, Immersive, FinalCta, Footer
+    ui/           primitives (CTA, labels, icons), ParallaxImage
+scripts/
+  fetch-images.mjs   re-download + re-encode the source imagery (`npm run images`)
+  build-preview.mjs  single self-contained HTML preview (`npm run preview:file`)
+```
+
+Scroll-linked motion writes progress into CSS custom properties (`--p`, `--e`, `--mx` …) and CSS
+does the transforms, so React never re-renders per frame. `prefers-reduced-motion` turns off
+smooth scrolling, parallax, the loader and every reveal.
+
+## Imagery
+
+All 12 images were generated for this project with GPT Image 2.5 via Higgsfield and art-directed per
+slot: aspect ratio, negative space for type, focal point.
