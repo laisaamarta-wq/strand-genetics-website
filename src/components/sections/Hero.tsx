@@ -59,6 +59,7 @@ export function Hero() {
           anchors: anchors.current,
           onFirstFrame: () => setGl("on"),
           onInteract: () => setTouched(true),
+          life: "atmospheric",
         });
       })
       .catch(() => setGl("off"));
