@@ -313,6 +313,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
   io.observe(canvas);
   const onVis = () => {
     running = document.visibilityState === "visible";
+    last = now();
     if (running && visible && !raf) raf = requestAnimationFrame(frame);
   };
   document.addEventListener("visibilitychange", onVis);
@@ -328,11 +329,13 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     raf = 0;
     if (!running || !visible) return;
     const t = now();
-    const dt = Math.min(0.05, t - last);
+    const raw = t - last;
+    const dt = Math.min(0.05, raw);
     last = t;
-    frameAvg = frameAvg * 0.95 + dt * 1000 * 0.05;
-    if (frameAvg > 30 && dpr > 1) {
-      dpr = Math.max(1, dpr - 0.25);
+    // adapt resolution only to sustained slowness, never to throttled / resumed frames
+    if (raw < 0.1) frameAvg = frameAvg * 0.96 + raw * 1000 * 0.04;
+    if (frameAvg > 34 && dpr > 1.25) {
+      dpr = Math.max(1.25, dpr - 0.25);
       renderer.setPixelRatio(dpr);
       resize();
       frameAvg = 16;
