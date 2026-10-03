@@ -26,13 +26,11 @@ export function Nav() {
       }
       if (bar.current) bar.current.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
 
-      // tone: is a [data-tone=dark] section under the nav?
+      // tone: is the surface actually visible under the nav a [data-nav-tone=dark] section?
+      // (hit-test rather than rects, so the sticky footer hidden beneath <main> doesn't count)
       const probe = 40;
-      let dark = false;
-      document.querySelectorAll<HTMLElement>("[data-nav-tone='dark']").forEach((s) => {
-        const r = s.getBoundingClientRect();
-        if (r.top <= probe && r.bottom >= probe) dark = true;
-      });
+      const hit = document.elementsFromPoint(window.innerWidth / 2, probe).find((n) => !el.contains(n));
+      const dark = !!hit?.closest("[data-nav-tone='dark']");
       el.dataset.tone = dark ? "dark" : "light";
     });
   }, []);

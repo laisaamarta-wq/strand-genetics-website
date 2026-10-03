@@ -1,0 +1,257 @@
+/* ------------------------------------------------------------------
+   STRAND — case study layer (/behance only)
+   Builds on the site's tokens in globals.css; adds frames, stages and
+   chapter rhythm. Nothing here is loaded on the production page.
+------------------------------------------------------------------- */
+
+/* ---------- chapter rhythm ---------- */
+.cs-chapter { padding-top: clamp(160px, 18vw, 280px); }
+.cs-gap-l { margin-top: clamp(96px, 11vw, 200px); }
+.cs-gap-m { margin-top: clamp(64px, 7vw, 128px); }
+.cs-gap-s { margin-top: clamp(32px, 3.5vw, 56px); }
+
+.cs-rule { border-top: 1px solid var(--color-line); }
+
+/* ---------- cover ---------- */
+.cs-cover { --p: 0; }
+.cs-cover__img {
+  transform: translate3d(0, calc(var(--p) * -14vh), 0) scale(calc(1 + var(--p) * 0.1));
+  will-change: transform;
+}
+.cs-cover__img > div {
+  opacity: 0;
+  transform: scale(1.06);
+  animation: enter-image 2s var(--ease) 0.1s forwards;
+}
+.cs-cover__mark {
+  transform: translate3d(0, calc(var(--p) * -6vh), 0);
+}
+.cs-rise {
+  display: inline-block;
+  transform: translate3d(0, 105%, 0);
+  animation: enter-line 1.4s var(--ease) forwards;
+  animation-delay: calc(0.35s + var(--i, 0) * 70ms);
+}
+.cs-fade {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  animation: enter 1.2s var(--ease) forwards;
+  animation-delay: calc(0.9s + var(--i, 0) * 90ms);
+}
+
+/* ---------- browser + phone frames ---------- */
+.cs-browser {
+  position: relative;
+  border-radius: 12px;
+  background: var(--color-paper);
+  box-shadow:
+    0 0 0 1px rgb(12 12 13 / 0.08),
+    0 2px 2px rgb(12 12 13 / 0.03),
+    0 32px 64px -40px rgb(12 12 13 / 0.35);
+  overflow: hidden;
+}
+.cs-browser__bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-paper);
+}
+.cs-browser__dots { display: flex; gap: 6px; }
+.cs-browser__dots i { width: 8px; height: 8px; border-radius: 999px; background: var(--color-paper-3); }
+.cs-browser__url {
+  font-size: 10px !important;
+  color: var(--color-mute);
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--color-paper-2);
+  white-space: nowrap;
+}
+.cs-browser__view { position: relative; }
+@media (max-width: 47.99rem) {
+  .cs-browser { border-radius: 8px; }
+  .cs-browser__bar { height: 26px; padding: 0 10px; }
+  .cs-browser__dots i { width: 6px; height: 6px; }
+  .cs-browser__url { font-size: 8px !important; padding: 2px 10px; }
+}
+
+.cs-phone {
+  position: relative;
+  padding: 6px;
+  border-radius: 34px;
+  background: var(--color-ink);
+  box-shadow: 0 32px 64px -36px rgb(12 12 13 / 0.45);
+}
+.cs-phone__screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--color-paper);
+  aspect-ratio: 390 / 844;
+}
+.cs-tablet {
+  position: relative;
+  padding: 8px;
+  border-radius: 26px;
+  background: var(--color-ink);
+  box-shadow: 0 32px 64px -36px rgb(12 12 13 / 0.45);
+}
+.cs-tablet__screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--color-paper);
+  aspect-ratio: 834 / 1194;
+}
+@media (max-width: 47.99rem) {
+  .cs-phone { padding: 4px; border-radius: 22px; }
+  .cs-phone__screen { border-radius: 18px; }
+  .cs-tablet { padding: 5px; border-radius: 16px; }
+  .cs-tablet__screen { border-radius: 11px; }
+}
+
+/* ---------- live stages ---------- */
+/* transform makes the stage the containing block for the site's fixed loader */
+.cs-hero-screen {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  height: clamp(560px, calc(100svh - 200px), 860px);
+  background: var(--color-paper);
+}
+.cs-hero-screen .hero { height: 100%; min-height: 0; }
+.cs-hero-screen .loader { position: absolute; }
+
+.cs-pill {
+  display: inline-flex; align-items: center; gap: 10px;
+  height: 40px; padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-paper);
+  font-size: 14px; letter-spacing: -0.01em;
+  transition: transform 0.4s var(--ease), border-color 0.4s var(--ease);
+}
+.cs-pill:hover { border-color: var(--color-ink); }
+.cs-pill:active { transform: scale(0.97); }
+.cs-pill[aria-pressed="true"] { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+
+.cs-live-dot {
+  position: relative; width: 6px; height: 6px; border-radius: 999px; background: var(--color-accent);
+}
+.cs-live-dot::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 999px;
+  border: 1px solid var(--color-accent);
+  animation: pulse 2.4s var(--ease) infinite;
+}
+
+/* ---------- scrub control ---------- */
+.cs-scrub { display: flex; align-items: center; gap: 16px; }
+.cs-scrub input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 24px; background: transparent; cursor: ew-resize;
+}
+.cs-scrub input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--color-ink); opacity: 0.9; }
+.cs-scrub input[type="range"]::-moz-range-track { height: 1px; background: var(--color-ink); }
+.cs-scrub input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; margin-top: -7.5px; border-radius: 999px;
+  background: var(--color-ink); transition: transform 0.4s var(--ease), background-color 0.3s var(--ease);
+}
+.cs-scrub input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border: 0; border-radius: 999px; background: var(--color-ink);
+}
+.cs-scrub input[type="range"]:hover::-webkit-slider-thumb,
+.cs-scrub input[type="range"]:focus-visible::-webkit-slider-thumb { transform: scale(1.25); background: var(--color-accent); }
+.cs-scrub input[type="range"]:focus-visible { outline: none; }
+.cs-scrub input[type="range"]:focus-visible + output { text-decoration: underline; }
+
+/* ---------- navigation states ---------- */
+.cs-strip {
+  position: relative; overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgb(12 12 13 / 0.08);
+  aspect-ratio: 720 / 100;
+  background: var(--color-paper-2);
+}
+@media (min-width: 48rem) { .cs-strip { aspect-ratio: 1440 / 100; } }
+.cs-strip img { object-position: left center; }
+.cs-wipe { clip-path: inset(0 0 100% 0); transition: clip-path 0.9s var(--ease-io); }
+.cs-wipe[data-on="true"] { clip-path: inset(0 0 0 0); }
+
+/* ---------- evidence chain (science) ---------- */
+.cs-chain li { transition: color 0.4s var(--ease); }
+.cs-chain:hover li:not(:hover) { color: var(--color-mute-2); }
+.cs-chain__letter {
+  display: inline-grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid currentColor;
+  transition: background-color 0.4s var(--ease), color 0.4s var(--ease), border-color 0.4s var(--ease);
+}
+.cs-chain li:hover .cs-chain__letter { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-paper); }
+
+/* ---------- system ---------- */
+.cs-swatch { aspect-ratio: 1; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(12 12 13 / 0.08); }
+.cs-cols { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; height: 96px; }
+.cs-cols span { background: rgb(122 111 155 / 0.1); border-inline: 1px solid rgb(122 111 155 / 0.3); }
+.cs-plus-btn .disc svg { transition: transform 0.6s var(--ease); }
+.cs-plus-btn:hover .disc { background: var(--color-accent); }
+.cs-plus-btn:hover .disc svg { transform: rotate(90deg); }
+.cs-plus-btn:active .disc { transform: scale(0.94); }
+
+/* ---------- live device (responsive) ---------- */
+.cs-device {
+  position: relative; margin-inline: auto;
+  transition: width 0.7s var(--ease), height 0.7s var(--ease);
+}
+.cs-device__iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: var(--color-paper); }
+.cs-device__overlay {
+  position: absolute; inset: 0; z-index: 2;
+  display: grid; place-items: center;
+  background: rgb(255 255 255 / 0);
+  transition: background-color 0.4s var(--ease);
+}
+.cs-device__overlay:hover { background: rgb(255 255 255 / 0.25); }
+
+/* ---------- filmstrip ---------- */
+.cs-marquee { overflow: hidden; }
+.cs-marquee__track {
+  display: flex; width: max-content;
+  animation: cs-marquee 110s linear infinite;
+}
+.cs-marquee:hover .cs-marquee__track,
+.cs-marquee:focus-within .cs-marquee__track { animation-play-state: paused; }
+.cs-marquee__item { width: clamp(280px, 40vw, 680px); flex: none; margin-right: clamp(16px, 2vw, 32px); }
+@keyframes cs-marquee { to { transform: translate3d(-50%, 0, 0); } }
+
+/* ---------- final CTA ---------- */
+.cs-live-cta {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding-block: clamp(24px, 3vw, 40px);
+  border-top: 1px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-ink);
+  overflow: hidden; isolation: isolate;
+  transition: color 0.5s var(--ease);
+}
+.cs-live-cta::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: var(--color-ink);
+  transform: translate3d(0, 101%, 0);
+  transition: transform 0.7s var(--ease-io);
+}
+.cs-live-cta:hover, .cs-live-cta:focus-visible { color: var(--color-paper); }
+.cs-live-cta:hover::before, .cs-live-cta:focus-visible::before { transform: none; }
+.cs-live-cta__arrow { transition: transform 0.7s var(--ease); }
+.cs-live-cta:hover .cs-live-cta__arrow { transform: translate3d(12px, 0, 0) rotate(-45deg); }
+.cs-live-cta:active { transform: scale(0.995); }
+.cs-live-cta__inner { padding-inline: var(--margin); }
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .cs-cover__img, .cs-cover__mark { transform: none !important; }
+  .cs-cover__img > div, .cs-rise, .cs-fade { opacity: 1 !important; transform: none !important; animation: none !important; }
+  .cs-marquee { overflow-x: auto; }
+  .cs-marquee__track { animation: none !important; }
+  .cs-live-dot::after { animation: none !important; }
+}

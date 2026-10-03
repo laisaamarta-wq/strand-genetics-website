@@ -7,6 +7,7 @@ const base = process.env.VERCEL_PROJECT_PRODUCTION_URL
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${base}/`, changeFrequency: "monthly", priority: 1 },
+    { url: `${base}/behance`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/legal`, changeFrequency: "yearly", priority: 0.3 },
   ];
 }

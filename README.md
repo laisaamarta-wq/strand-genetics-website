@@ -37,6 +37,7 @@ output `.next`). Every push to `main` triggers a new production deployment.
 | Route | |
 |---|---|
 | `/` | Landing page: hero, approach, testing, science, process, about, perspective, call to action |
+| `/behance` | Case study: concept, art direction, live interaction showcases, system, responsive, every screen |
 | `/legal` | Privacy, terms, accessibility and credits |
 | `/sitemap.xml`, `/robots.txt` | Generated from `src/app` |
 | any other path | Custom 404 |
@@ -65,6 +66,7 @@ src/
   components/
     motion/       SmoothScroll (one scroll loop → CSS variables), hooks, Reveal/SplitLines, Interactions
     sections/     Loader, Nav, Hero, Intro, Services, Science, Process, About, Immersive, FinalCta, Footer
+    case/         /behance case study: frames, chapters, live showcases (reuse the sections above)
     ui/           primitives (CTA, labels, icons), ParallaxImage
 scripts/
   fetch-images.mjs   re-download + re-encode the source imagery (`npm run images`)
@@ -74,6 +76,14 @@ scripts/
 Scroll-linked motion writes progress into CSS custom properties (`--p`, `--e`, `--mx` …) and CSS
 does the transforms, so React never re-renders per frame. `prefers-reduced-motion` turns off
 smooth scrolling, parallax, the loader and every reveal.
+
+## Case study (`/behance`)
+
+A Behance-style presentation of the project, built from the production code itself: the Hero (with Loader),
+Testing and Process sections run live inside it, the Approach reading and Science frame use the site's own CSS
+mechanics with a scrub control, and the column grid toggle is the site's Shift + G overlay. Static frames are real
+screenshots of the production build (`src/assets/case`, captured at 1440, 834 and 390 px). Copy lives in
+`src/content/case.ts`; styles in `src/app/behance/case.css` load on that route only.
 
 ## Imagery
 
