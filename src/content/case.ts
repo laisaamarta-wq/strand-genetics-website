@@ -192,3 +192,11 @@ export const finale = {
   imagery: "Imagery generated with Higgsfield.",
   cta: "View live website",
 };
+
+export const contact = {
+  label: "Let's work together",
+  name: "Marta Jakovleva",
+  role: "UX/UI Designer · AI Visual Creator",
+  email: { label: "laisaa.marta@gmail.com", href: "mailto:laisaa.marta@gmail.com" },
+  whatsapp: { label: "+371 28 203 044", href: "https://wa.me/37128203044" },
+};
