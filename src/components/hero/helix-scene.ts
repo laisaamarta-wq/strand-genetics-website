@@ -28,12 +28,12 @@ export type HelixOptions = {
 /* geometry                                                             */
 /* ------------------------------------------------------------------ */
 
-const L = 27; // helix length along local X
-const R = 1.62; // helix radius
+export const L = 27; // helix length along local X
+export const R = 1.62; // helix radius
 const TURNS = 5.3;
 const GROOVE = Math.PI * 0.82; // phase between the two strands (major / minor groove)
 
-type Inst = {
+export type Inst = {
   bx: number; by: number; bz: number; // base position (local)
   r: number; // radius
   s: number; // position along axis, -L/2..L/2
@@ -54,7 +54,7 @@ function rand(seed: number) {
   };
 }
 
-function buildHelix(detail: number): Inst[] {
+export function buildHelix(detail: number): Inst[] {
   const rnd = rand(20260403);
   const out: Inst[] = [];
   const push = (x: number, y: number, z: number, r: number, shade: number) =>
@@ -138,6 +138,11 @@ function buildLoose(): { x: number; y: number; z: number; r: number; c: number }
 /* ------------------------------------------------------------------ */
 
 export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract }: HelixOptions) {
+  // Frame-exact recording for presentation videos (local builds with NEXT_PUBLIC_CAPTURE=1 only).
+  const capture = process.env.NEXT_PUBLIC_CAPTURE === "1";
+  let virtualTime = 0;
+  const now = () => (capture ? virtualTime : performance.now() / 1000);
+
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const small = Math.min(window.innerWidth, window.innerHeight) < 700;
   const detail = coarse || small ? 0.7 : 1;
@@ -209,8 +214,8 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
   })();
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, opacity: 0 }));
-  halo.renderOrder = -1;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
+  halo.renderOrder = 2;
   spin.add(halo);
 
   /* ---------------- layout ---------------- */
@@ -243,7 +248,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     pointerInside = x >= 0 && x <= 1 && y >= 0 && y <= 1 && e.pointerType !== "touch";
     ndc.set(Math.max(-1.2, Math.min(1.2, x * 2 - 1)), Math.max(-1.2, Math.min(1.2, -(y * 2 - 1))));
     pointerMoved = true;
-    lastMove = performance.now();
+    lastMove = now() * 1000;
   };
   const onLeave = () => (pointerInside = false);
 
@@ -252,7 +257,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
 
   type Wave = { s0: number; t0: number; amp: number };
   const waves: Wave[] = [];
-  const now = () => performance.now() / 1000;
+
   const pulse = (s0: number, amp = 1) => {
     waves.push({ s0, t0: now(), amp });
     if (waves.length > 4) waves.shift();
@@ -270,6 +275,17 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     if (hit && hit.instanceId !== undefined) {
       pulse(inst[hit.instanceId].s, 1);
       onInteract?.();
+      return;
+    }
+    // between spheres still counts: pulse from the nearest point on the helix
+    place.getWorldPosition(tmp);
+    plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(v3).negate(), tmp);
+    if (raycaster.ray.intersectPlane(plane, localPointer)) {
+      mesh.worldToLocal(localPointer);
+      if (Math.hypot(localPointer.y, localPointer.z) < R + 1.1 && Math.abs(localPointer.x) < L / 2) {
+        pulse(localPointer.x, 1);
+        onInteract?.();
+      }
     }
   };
 
@@ -308,13 +324,13 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
 
   const io = new IntersectionObserver(([e]) => {
     visible = e.isIntersecting;
-    if (visible && running && !raf) raf = requestAnimationFrame(frame);
+    if (visible && running && !raf && !capture) raf = requestAnimationFrame(frame);
   });
   io.observe(canvas);
   const onVis = () => {
     running = document.visibilityState === "visible";
     last = now();
-    if (running && visible && !raf) raf = requestAnimationFrame(frame);
+    if (running && visible && !raf && !capture) raf = requestAnimationFrame(frame);
   };
   document.addEventListener("visibilitychange", onVis);
   const ro = new ResizeObserver(resize);
@@ -429,7 +445,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
         const front = age * 11;
         const ds = Math.abs(it.s - w.s0);
         const g = Math.exp(-((ds - front) ** 2) / 2.2);
-        swell += g * Math.exp(-age * 1.1) * 0.46 * w.amp;
+        swell += g * Math.exp(-age * 1.05) * 0.5 * w.amp;
       }
       if (swell > 0.001) {
         const rl = Math.hypot(it.by, it.bz) + 1e-4;
@@ -460,9 +476,10 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
       mesh.setMatrixAt(i, m4);
 
       if (it.h > 0.002 || swell > 0.002) {
-        const b = 0.86 + it.shade * 0.14;
-        const v = Math.min(1, b + it.h * 0.16 + swell * 0.1);
-        mesh.setColorAt(i, col.setRGB(v, v, v));
+        const b = Math.min(1, 0.86 + it.shade * 0.14 + it.h * 0.1);
+        const k = Math.min(0.42, it.h * 0.32 + swell * 0.55);
+        // on a white field brightness alone is invisible: interaction tints toward violet ash #7A6F9B
+        mesh.setColorAt(i, col.setRGB(b + (0.478 - b) * k, b + (0.435 - b) * k, b + (0.608 - b) * k));
         it.lit = true;
       } else if (it.lit) {
         const b = 0.86 + it.shade * 0.14;
@@ -478,9 +495,9 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     const hm = halo.material as THREE.SpriteMaterial;
     if (hb) {
       halo.position.set(hb.bx + hb.dx, hb.by + hb.dy, hb.bz + hb.dz);
-      halo.scale.setScalar(hb.r * 5.5);
+      halo.scale.setScalar(hb.r * 4.6);
     }
-    hm.opacity += ((hb ? 0.9 : 0) - hm.opacity) * 0.12;
+    hm.opacity += ((hb ? 0.55 : 0) - hm.opacity) * 0.12;
 
     // loose molecules: closest layer, strongest parallax, drifting on their own
     loose.forEach((l, i) => {
@@ -523,9 +540,16 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
       first = false;
       onFirstFrame?.();
     }
+    if (!capture) raf = requestAnimationFrame(frame);
+  }
+  if (capture) {
+    (window as unknown as { __helixStep?: (dt: number) => void }).__helixStep = (dt: number) => {
+      virtualTime += dt;
+      frame();
+    };
+  } else {
     raf = requestAnimationFrame(frame);
   }
-  raf = requestAnimationFrame(frame);
 
   return {
     pulse: () => pulse(-L / 2 - 1, 1),
