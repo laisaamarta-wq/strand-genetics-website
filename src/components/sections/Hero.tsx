@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { hero } from "@/content/site";
 import { images } from "@/lib/images";
 import { useScrollProgress } from "@/components/motion/hooks";
@@ -13,9 +13,60 @@ const HOTSPOTS = [
   { x: 71, y: 30, card: "left-4 top-6" },
 ];
 
+function HotspotCard({ h, card }: { h: (typeof hero.hotspots)[number]; card: string }) {
+  return (
+    <>
+      <span className="hotspot-dot relative block h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" aria-hidden="true" />
+      <a href={h.href} className={`hotspot-card group absolute ${card} block w-[288px] p-4`}>
+        <span className="flex items-center justify-between">
+          <span className="text-[15px] tracking-[-0.015em]">{h.title}</span>
+          <span className="disc h-7 w-7 group-hover:bg-accent">
+            <Plus className="transition-transform duration-700 group-hover:rotate-90" />
+          </span>
+        </span>
+        <span className="mt-4 block text-[13px] leading-[1.4] text-ink-2">{h.body}</span>
+      </a>
+    </>
+  );
+}
+
+type GlState = "off" | "loading" | "on";
+
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
   useScrollProgress(ref, { mode: "exit" });
+
+  // live helix (WebGL). The art-directed image stays as the server-rendered poster and the fallback
+  // for reduced motion or no WebGL; the live molecule replaces it once its first frame is drawn.
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const anchors = useRef<(HTMLDivElement | null)[]>([null, null, null]);
+  const [gl, setGl] = useState<GlState>("off");
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const probe = document.createElement("canvas");
+    if (!(probe.getContext("webgl2") || probe.getContext("webgl"))) return;
+    setGl("loading");
+    let disposed = false;
+    let helix: { dispose: () => void } | null = null;
+    import("@/components/hero/helix-scene")
+      .then(({ createHelix }) => {
+        if (disposed || !canvas.current || !ref.current) return;
+        helix = createHelix({
+          canvas: canvas.current,
+          section: ref.current,
+          anchors: anchors.current,
+          onFirstFrame: () => setGl("on"),
+          onInteract: () => setTouched(true),
+        });
+      })
+      .catch(() => setGl("off"));
+    return () => {
+      disposed = true;
+      helix?.dispose();
+    };
+  }, []);
 
   // pointer depth: eased --mx / --my in [-1, 1]
   useEffect(() => {
@@ -48,6 +99,7 @@ export function Hero() {
       ref={ref}
       aria-labelledby="hero-title"
       className="hero relative h-[100svh] min-h-[640px] overflow-hidden bg-paper md:min-h-[760px]"
+      data-gl={gl}
     >
       {/* Layer 1 — the helix */}
       <div className="hero__helix absolute left-[-62%] top-[11%] w-[250%] md:left-[-30%] md:top-[10%] md:w-[170%] lg:left-[-5%] lg:top-[-7%] lg:w-[112%]">
@@ -61,27 +113,16 @@ export function Hero() {
             placeholder="blur"
           />
           {/* hotspots ride on the helix so they share its depth */}
-          {hero.hotspots.map((h, i) => (
-            <div
-              key={h.id}
-              className="enter absolute hidden lg:block"
-              style={{ left: `${HOTSPOTS[i].x}%`, top: `${HOTSPOTS[i].y}%`, "--i": 6 + i } as CSSProperties}
-            >
-              <span className="hotspot-dot relative block h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" aria-hidden="true" />
-              <a
-                href={h.href}
-                className={`hotspot-card group absolute ${HOTSPOTS[i].card} block w-[288px] p-4`}
+          {gl !== "on" &&
+            hero.hotspots.map((h, i) => (
+              <div
+                key={h.id}
+                className="enter absolute hidden lg:block"
+                style={{ left: `${HOTSPOTS[i].x}%`, top: `${HOTSPOTS[i].y}%`, "--i": 6 + i } as CSSProperties}
               >
-                <span className="flex items-center justify-between">
-                  <span className="text-[15px] tracking-[-0.015em]">{h.title}</span>
-                  <span className="disc h-7 w-7 group-hover:bg-accent">
-                    <Plus className="transition-transform duration-700 group-hover:rotate-90" />
-                  </span>
-                </span>
-                <span className="mt-4 block text-[13px] leading-[1.4] text-ink-2">{h.body}</span>
-              </a>
-            </div>
-          ))}
+                <HotspotCard h={h} card={HOTSPOTS[i].card} />
+              </div>
+            ))}
         </div>
       </div>
 
@@ -94,6 +135,35 @@ export function Hero() {
           <Image src={images.particles.src} alt="" sizes="(min-width: 1200px) 17vw, 46vw" className="h-auto w-full" />
         </div>
       </div>
+
+      {/* Layer 1b — the live helix, with the hotspots riding on its spheres */}
+      {gl !== "off" && (
+        <>
+          <canvas ref={canvas} className="hero__gl pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0 }} aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-0" data-ready={gl === "on"}>
+            {hero.hotspots.map((h, i) => (
+              <div
+                key={h.id}
+                ref={(el) => { anchors.current[i] = el; }}
+                className="hero-anchor absolute left-0 top-0 hidden lg:block"
+              >
+                <div className="enter pointer-events-auto" style={{ "--i": 6 + i } as CSSProperties}>
+                  <HotspotCard h={h} card={HOTSPOTS[i].card} />
+                </div>
+              </div>
+            ))}
+            <div ref={(el) => { anchors.current[2] = el; }} className="hero-anchor absolute left-0 top-0" aria-hidden="true">
+              <p className="hero-hint t-mono" data-hidden={touched}>
+                <span className="hero-hint__line" />
+                <span className="hero-hint__text">
+                  <span className="hidden md:inline">Move to explore · click a sphere</span>
+                  <span className="md:hidden">Tap the helix</span>
+                </span>
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Layer 3 — typography */}
       <div className="hero__title absolute inset-x-0 bottom-0 pb-6 md:pb-10 lg:pb-12">
