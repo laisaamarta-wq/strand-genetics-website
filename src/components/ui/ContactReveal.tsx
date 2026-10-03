@@ -19,7 +19,16 @@ const pretty = (p: string) => p.replace(/^\+371(\d{2})(\d{3})(\d{3})$/, "+371 $1
 
 type Kind = "email" | "phone";
 
-export function ContactReveal({ className = "", label = "Get in touch" }: { className?: string; label?: string }) {
+export function ContactReveal({
+  className = "",
+  label = "Get in touch",
+  variant = "inline",
+}: {
+  className?: string;
+  label?: string;
+  /** "column" matches the footer's link columns (heading + list); "inline" is a compact mono row */
+  variant?: "inline" | "column";
+}) {
   const [open, setOpen] = useState<Kind | null>(null);
   const [value, setValue] = useState<{ email?: string; phone?: string }>({});
   const [copied, setCopied] = useState(false);
@@ -74,23 +83,48 @@ export function ContactReveal({ className = "", label = "Get in touch" }: { clas
 
   return (
     <div ref={root} className={`contact-reveal ${className}`} data-open={open ?? "none"}>
-      <p className="t-mono opacity-50">{label}</p>
-      <div className="mt-3 flex gap-6">
-        {(["email", "phone"] as Kind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            className="contact-reveal__btn t-mono inline-flex items-center gap-2 py-1"
-            aria-expanded={open === k}
-            aria-controls={panelId}
-            data-active={open === k}
-            onClick={() => toggle(k)}
-          >
-            <span className="link-u pb-0.5">{k === "email" ? "Email" : "Phone"}</span>
-            <Plus size={8} className="contact-reveal__plus" />
-          </button>
-        ))}
-      </div>
+      {variant === "column" ? (
+        <>
+          <h2 className="t-mono opacity-50">{label}</h2>
+          <ul className="mt-5 space-y-1 text-[15px] tracking-[-0.01em]">
+            {(["email", "phone"] as Kind[]).map((k) => (
+              <li key={k}>
+                <button
+                  type="button"
+                  className="contact-reveal__btn inline-flex items-center gap-2 py-1"
+                  aria-expanded={open === k}
+                  aria-controls={panelId}
+                  data-active={open === k}
+                  onClick={() => toggle(k)}
+                >
+                  <span className="link-u pb-0.5">{k === "email" ? "Email" : "Phone"}</span>
+                  <Plus size={9} className="contact-reveal__plus opacity-60" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <p className="t-mono opacity-50">{label}</p>
+          <div className="mt-3 flex gap-6">
+            {(["email", "phone"] as Kind[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                className="contact-reveal__btn t-mono inline-flex items-center gap-2 py-1"
+                aria-expanded={open === k}
+                aria-controls={panelId}
+                data-active={open === k}
+                onClick={() => toggle(k)}
+              >
+                <span className="link-u pb-0.5">{k === "email" ? "Email" : "Phone"}</span>
+                <Plus size={8} className="contact-reveal__plus" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <div id={panelId} className="contact-reveal__panel" aria-live="polite">
         <div>

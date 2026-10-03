@@ -13,7 +13,14 @@ export function Footer() {
         <p className="t-lead col-span-4 max-w-[26ch] md:col-span-3 lg:col-span-4">
           Genetic testing and DNA analysis, read with precision and explained with care.
         </p>
-        {footer.columns.map((col, ci) => (
+        {footer.columns.map((col, ci) => col.title === "Contact" ? (
+          <ContactReveal
+            key={col.title}
+            variant="column"
+            label="Contact"
+            className="col-span-2 md:col-span-3 lg:col-span-2"
+          />
+        ) : (
           <nav
             key={col.title}
             aria-label={col.title}
@@ -40,8 +47,7 @@ export function Footer() {
           <p className="t-small">{footer.concept}</p>
           <p className="t-small mt-2 opacity-50">{footer.disclaimer}</p>
         </div>
-        <ContactReveal className="col-span-4 md:col-span-5 lg:col-span-3 lg:col-start-7" />
-        <p className="t-mono col-span-4 opacity-50 md:col-span-3 md:col-start-6 md:row-start-1 md:text-right lg:col-span-3 lg:col-start-10">{footer.copyright}</p>
+        <p className="t-mono col-span-4 opacity-50 md:col-span-3 md:text-right lg:col-span-3 lg:col-start-10">{footer.copyright}</p>
       </div>
 
       <Reveal kind="group" className="overflow-hidden px-site pb-2" >
