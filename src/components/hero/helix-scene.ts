@@ -36,7 +36,7 @@ export type HelixOptions = {
 
 export type LifeLevel = "off" | "subtle" | "living" | "atmospheric";
 
-type LifePreset = {
+export type LifePreset = {
   amt: number; // how far a sphere can travel along white → grey → ash violet → luminous
   reach: number; // how much of the structure the currents cover
   glow: number; // opacity of the violet glow in the gaps between spheres
@@ -44,7 +44,7 @@ type LifePreset = {
   rest: number; // permanent tonal variation of a few spheres
 };
 
-const LIFE: Record<Exclude<LifeLevel, "off">, LifePreset> = {
+export const LIFE: Record<Exclude<LifeLevel, "off">, LifePreset> = {
   subtle: { amt: 0.55, reach: 0.6, glow: 0, shadow: 0.2, rest: 0.1 },
   living: { amt: 0.85, reach: 0.85, glow: 0.22, shadow: 0.4, rest: 0.16 },
   atmospheric: { amt: 1, reach: 1, glow: 0.4, shadow: 0.65, rest: 0.24 },
@@ -64,12 +64,12 @@ export function readLifeLevel(fallback: LifeLevel = "off"): LifeLevel {
 const LAV = [0.815, 0.8, 0.86];
 const ASH = [0.478, 0.435, 0.608];
 const LUM = [0.6, 0.54, 0.84];
-const sstep = (a: number, b: number, x: number) => {
+export const sstep = (a: number, b: number, x: number) => {
   const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return u * u * (3 - 2 * u);
 };
 /** white-grey base b → violet, by life l in 0..1. Writes into out. */
-function lifeColor(b: number, l: number, out: number[]) {
+export function lifeColor(b: number, l: number, out: number[]) {
   let r = b, g = b, bl = b * 0.995;
   const k1 = sstep(0, 0.4, l);
   r += (LAV[0] - r) * k1; g += (LAV[1] - g) * k1; bl += (LAV[2] - bl) * k1;
@@ -78,6 +78,20 @@ function lifeColor(b: number, l: number, out: number[]) {
   const k3 = sstep(0.82, 1, l);
   r += (LUM[0] - r) * k3; g += (LUM[1] - g) * k3; bl += (LUM[2] - bl) * k3;
   out[0] = r; out[1] = g; out[2] = bl;
+}
+
+/** how alive one sphere is at time t (0..1) — shared by the site and the presentation renders */
+export function lifeAt(it: Inst, t: number, LP: LifePreset, grow: number, swell = 0) {
+  // currents flowing along each strand (slow, opposite phase), modulated by a slower tide
+  const c1 = 0.5 + 0.5 * Math.sin(it.s * 0.5 - t * 0.32 + (it.kind === 1 ? 2.2 : it.kind === 2 ? 1.1 : 0));
+  const c2 = 0.5 + 0.5 * Math.sin(it.s * 0.19 + t * 0.09 + 2.1);
+  const flow = c1 * c1 * c1 * c1 * (0.4 + 0.6 * c2);
+  // each sphere breathes on its own clock — cells at work, almost imperceptibly
+  const breathe = 0.72 + 0.28 * Math.sin(t * (0.35 + it.seed * 0.3) + it.seed * 40);
+  let l = flow * (0.5 + 0.5 * it.aff) * breathe * (0.95 + 0.6 * LP.reach);
+  l = Math.max(l, it.aff > 0.86 ? LP.rest * 2.6 : 0); // a few spheres keep a quiet tone of their own
+  l += swell * 0.5; // a touch sends the signal through
+  return Math.min(1, l) * LP.amt * grow;
 }
 
 /* ------------------------------------------------------------------ */
@@ -582,16 +596,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
       mesh.setMatrixAt(i, m4);
 
       if (LP && grow > 0) {
-        // currents flowing along each strand (slow, opposite phase), modulated by a slower tide
-        const c1 = 0.5 + 0.5 * Math.sin(it.s * 0.5 - t * 0.32 + (it.kind === 1 ? 2.2 : it.kind === 2 ? 1.1 : 0));
-        const c2 = 0.5 + 0.5 * Math.sin(it.s * 0.19 + t * 0.09 + 2.1);
-        const flow = c1 * c1 * c1 * c1 * (0.4 + 0.6 * c2);
-        // each sphere breathes on its own clock — cells at work, almost imperceptibly
-        const breathe = 0.72 + 0.28 * Math.sin(t * (0.35 + it.seed * 0.3) + it.seed * 40);
-        let l = flow * (0.5 + 0.5 * it.aff) * breathe * (0.95 + 0.6 * LP.reach);
-        l = Math.max(l, it.aff > 0.86 ? LP.rest * 2.6 : 0); // a few spheres keep a quiet tone of their own
-        l += swell * 0.5; // a touch sends the signal through
-        l = Math.min(1, l) * LP.amt * grow;
+        const l = lifeAt(it, t, LP, grow, swell);
         const b = Math.min(1, 0.86 + it.shade * 0.14 + it.h * 0.1);
         lifeColor(b, l, lc);
         const k = Math.min(0.42, it.h * 0.32);

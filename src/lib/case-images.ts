@@ -34,7 +34,7 @@ import navDark from "@/assets/case/nav-dark.webp";
  * at 1440 × 900, 834 × 1194 and 390 × 844. Nothing here is mocked up.
  */
 export const shots = {
-  dHero: { src: dHero, alt: "Desktop hero: a white DNA helix of matte spheres above the headline Genetics, in focus." },
+  dHero: { src: dHero, alt: "Desktop hero: a DNA helix of matte white spheres with ash violet flowing through it, above the headline Genetics, in focus." },
   dApproach: { src: dApproach, alt: "Desktop Approach section: the opening statement, partly lit word by word." },
   dTesting: { src: dTesting, alt: "Desktop Testing section: headline Six disciplines. One laboratory. above an index of six tests." },
   dTestingHover: { src: dTestingHover, alt: "Testing index on hover: one row in focus, the rest faded, a flow cell preview beside the cursor." },
