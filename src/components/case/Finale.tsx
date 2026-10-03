@@ -7,6 +7,7 @@ import { shots, type ShotKey } from "@/lib/case-images";
 import { Immersive } from "@/components/sections/Immersive";
 import { Reveal, SplitLines } from "@/components/motion/Reveal";
 import { Arrow } from "@/components/ui/primitives";
+import { ContactReveal } from "@/components/ui/ContactReveal";
 
 /* ------------------------------------------------------------------ */
 /* 11 — every screen of the production site, drifting past             */
@@ -102,22 +103,7 @@ export function Finale() {
               <p className="t-heading mt-5">{contact.name}</p>
               <p className="t-mono mt-2 opacity-50">{contact.role}</p>
             </div>
-            <ul className="col-span-4 space-y-5 self-end md:col-span-4 lg:col-span-5 lg:col-start-8">
-              <li>
-                <p className="t-mono opacity-50">Email</p>
-                <a href={contact.email.href} className="group mt-2 inline-flex items-center gap-3 text-[clamp(20px,2.2vw,30px)] tracking-[-0.02em]">
-                  <span className="link-u pb-0.5">{contact.email.label}</span>
-                  <Arrow className="-rotate-45 transition-transform duration-500 group-hover:rotate-0" />
-                </a>
-              </li>
-              <li>
-                <p className="t-mono opacity-50">WhatsApp</p>
-                <a href={contact.whatsapp.href} target="_blank" rel="noopener noreferrer" className="group mt-2 inline-flex items-center gap-3 text-[clamp(20px,2.2vw,30px)] tracking-[-0.02em]">
-                  <span className="link-u pb-0.5">{contact.whatsapp.label}</span>
-                  <Arrow className="-rotate-45 transition-transform duration-500 group-hover:rotate-0" />
-                </a>
-              </li>
-            </ul>
+            <ContactReveal label="Contact" className="col-span-4 self-end md:col-span-4 lg:col-span-5 lg:col-start-8" />
           </div>
         </Reveal>
 

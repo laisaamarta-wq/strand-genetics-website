@@ -450,6 +450,20 @@ img { user-select: none; -webkit-user-drag: none; }
   will-change: transform;
 }
 
+/* ---------- contact reveal (footer) ---------- */
+.contact-reveal__btn { transition: opacity 0.4s var(--ease); }
+.contact-reveal[data-open="email"] .contact-reveal__btn:not([data-active="true"]),
+.contact-reveal[data-open="phone"] .contact-reveal__btn:not([data-active="true"]) { opacity: 0.45; }
+.contact-reveal__btn[data-active="true"] .link-u { background-size: 100% 1px; }
+.contact-reveal__plus { transition: transform 0.6s var(--ease); }
+.contact-reveal__btn[data-active="true"] .contact-reveal__plus { transform: rotate(45deg); }
+.contact-reveal__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.6s var(--ease); }
+.contact-reveal:not([data-open="none"]) .contact-reveal__panel { grid-template-rows: 1fr; }
+.contact-reveal__panel > div { overflow: hidden; }
+.contact-reveal__row { animation: contact-in 0.7s var(--ease) both; }
+@keyframes contact-in { from { opacity: 0; transform: translate3d(0, -6px, 0); } to { opacity: 1; transform: none; } }
+.contact-reveal button:focus-visible, .contact-reveal a:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+
 /* ---------- footer wordmark ---------- */
 .wordmark-letter {
   display: inline-block;
