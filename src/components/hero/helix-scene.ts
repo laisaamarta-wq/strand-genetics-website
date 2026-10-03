@@ -10,6 +10,10 @@
  *   - click     → a soft wave runs along the helix from the point touched, then settles
  *   - idle      → slow spin around its own axis, weightless drift
  *   - scroll    → the helix recedes into depth and opens the page beneath it
+ *   - life      → (optional) ash violet flows slowly through the structure, as if the code were at work:
+ *                 currents travel along the strands, base pairs light as they pass, single spheres
+ *                 breathe on their own clock, and a faint violet glow lives in the gaps between them.
+ *                 It builds up after the white sculpture has been seen: white → grey → ash violet.
  * Everything is eased; nothing jumps. One render loop, paused when the hero is off-screen.
  */
 import * as THREE from "three";
@@ -22,7 +26,59 @@ export type HelixOptions = {
   anchors: (HTMLElement | null)[];
   onFirstFrame?: () => void;
   onInteract?: () => void;
+  /** intensity of the violet "life" inside the molecule; ?life=subtle|living|atmospheric overrides */
+  life?: LifeLevel;
 };
+
+/* ------------------------------------------------------------------ */
+/* life — ash violet living inside the molecule                         */
+/* ------------------------------------------------------------------ */
+
+export type LifeLevel = "off" | "subtle" | "living" | "atmospheric";
+
+type LifePreset = {
+  amt: number; // how far a sphere can travel along white → grey → ash violet → luminous
+  reach: number; // how much of the structure the currents cover
+  glow: number; // opacity of the violet glow in the gaps between spheres
+  shadow: number; // violet in the shaded sides of every sphere
+  rest: number; // permanent tonal variation of a few spheres
+};
+
+const LIFE: Record<Exclude<LifeLevel, "off">, LifePreset> = {
+  subtle: { amt: 0.55, reach: 0.6, glow: 0, shadow: 0.2, rest: 0.1 },
+  living: { amt: 0.85, reach: 0.85, glow: 0.22, shadow: 0.4, rest: 0.16 },
+  atmospheric: { amt: 1, reach: 1, glow: 0.4, shadow: 0.65, rest: 0.24 },
+};
+
+export function readLifeLevel(fallback: LifeLevel = "off"): LifeLevel {
+  if (typeof window === "undefined") return fallback;
+  const q = new URLSearchParams(window.location.search).get("life")?.toLowerCase();
+  const map: Record<string, LifeLevel> = {
+    "0": "off", off: "off", "1": "subtle", "01": "subtle", subtle: "subtle",
+    "2": "living", "02": "living", living: "living", "3": "atmospheric", "03": "atmospheric", atmospheric: "atmospheric",
+  };
+  return (q && map[q]) || fallback;
+}
+
+// palette (sRGB): grey-lavender → ash violet #7A6F9B → luminous violet
+const LAV = [0.815, 0.8, 0.86];
+const ASH = [0.478, 0.435, 0.608];
+const LUM = [0.6, 0.54, 0.84];
+const sstep = (a: number, b: number, x: number) => {
+  const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return u * u * (3 - 2 * u);
+};
+/** white-grey base b → violet, by life l in 0..1. Writes into out. */
+function lifeColor(b: number, l: number, out: number[]) {
+  let r = b, g = b, bl = b * 0.995;
+  const k1 = sstep(0, 0.4, l);
+  r += (LAV[0] - r) * k1; g += (LAV[1] - g) * k1; bl += (LAV[2] - bl) * k1;
+  const k2 = sstep(0.3, 0.85, l);
+  r += (ASH[0] - r) * k2; g += (ASH[1] - g) * k2; bl += (ASH[2] - bl) * k2;
+  const k3 = sstep(0.82, 1, l);
+  r += (LUM[0] - r) * k3; g += (LUM[1] - g) * k3; bl += (LUM[2] - bl) * k3;
+  out[0] = r; out[1] = g; out[2] = bl;
+}
 
 /* ------------------------------------------------------------------ */
 /* geometry                                                             */
@@ -38,6 +94,9 @@ export type Inst = {
   r: number; // radius
   s: number; // position along axis, -L/2..L/2
   shade: number; // 0..1 base brightness offset
+  kind: 0 | 1 | 2; // strand A, strand B, base-pair rung
+  aff: number; // 0..1 how readily this sphere carries colour (life)
+  seed: number; // 0..1 phase of its own slow breathing
   dx: number; dy: number; dz: number; // current displacement (eased)
   h: number; // highlight (eased)
   lit: boolean; // colour currently differs from base
@@ -57,11 +116,21 @@ function rand(seed: number) {
 export function buildHelix(detail: number): Inst[] {
   const rnd = rand(20260403);
   const out: Inst[] = [];
-  const push = (x: number, y: number, z: number, r: number, shade: number) =>
-    out.push({ bx: x, by: y, bz: z, r, s: x, shade, dx: 0, dy: 0, dz: 0, h: 0, lit: false });
+  const rl = rand(4101); // separate stream so the geometry stays identical
+  let kind: 0 | 1 | 2 = 0;
+  const push = (x: number, y: number, z: number, r: number, shade: number) => {
+    const a = rl();
+    out.push({
+      bx: x, by: y, bz: z, r, s: x, shade, kind,
+      aff: kind === 2 ? 0.55 + a * 0.45 : a * a, // the code (rungs) carries the signal; backbones only in places
+      seed: rl(),
+      dx: 0, dy: 0, dz: 0, h: 0, lit: false,
+    });
+  };
 
   const samples = Math.round(330 * detail);
   for (const phase of [0, GROOVE]) {
+    kind = phase === 0 ? 0 : 1;
     for (let i = 0; i < samples; i++) {
       const t = i / (samples - 1);
       const x = -L / 2 + t * L;
@@ -89,6 +158,7 @@ export function buildHelix(detail: number): Inst[] {
 
   // base-pair rungs: finer spheres bridging the strands
   const rungs = Math.round(TURNS * 10);
+  kind = 2;
   for (let i = 0; i < rungs; i++) {
     const t = (i + 0.5) / rungs;
     const x = -L / 2 + t * L;
@@ -137,7 +207,9 @@ function buildLoose(): { x: number; y: number; z: number; r: number; c: number }
 /* scene                                                                */
 /* ------------------------------------------------------------------ */
 
-export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract }: HelixOptions) {
+export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract, life: lifeOpt = "off" }: HelixOptions) {
+  const lifeLevel = readLifeLevel(lifeOpt);
+  const LP = lifeLevel === "off" ? null : LIFE[lifeLevel];
   // Frame-exact recording for presentation videos (local builds with NEXT_PUBLIC_CAPTURE=1 only).
   const capture = process.env.NEXT_PUBLIC_CAPTURE === "1";
   let virtualTime = 0;
@@ -161,7 +233,10 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
   camera.position.set(0, 0, 20);
 
   // clay light: bright sky, grey bounce, one soft key from the upper left
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x9c9c99, 2.2));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x9c9c99, 2.2);
+  scene.add(hemi);
+  const groundGrey = new THREE.Color(0x9c9c99);
+  const groundViolet = new THREE.Color(0x8a83a6); // shaded sides lean toward ash violet as life builds
   const key = new THREE.DirectionalLight(0xffffff, 1.35);
   key.position.set(-6, 9, 10);
   scene.add(key);
@@ -217,6 +292,32 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
   halo.renderOrder = 2;
   spin.add(halo);
+
+  // life glow: soft violet light inside the helix, riding the currents; it shows only through the gaps
+  const glowTex = (() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const g = c.getContext("2d")!;
+    const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, "rgba(140,126,190,0.75)");
+    grd.addColorStop(0.35, "rgba(132,120,176,0.32)");
+    grd.addColorStop(0.7, "rgba(122,111,155,0.08)");
+    grd.addColorStop(1, "rgba(122,111,155,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const glows: THREE.Sprite[] = [];
+  if (LP && LP.glow > 0) {
+    for (let i = 0; i < 12; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, opacity: 0 }));
+      sp.renderOrder = 1;
+      spin.add(sp);
+      glows.push(sp);
+    }
+  }
 
   /* ---------------- layout ---------------- */
   let W = 1, H = 1;
@@ -302,6 +403,7 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
   const localPointer = new THREE.Vector3();
   const tmp = new THREE.Vector3();
   const col = new THREE.Color();
+  const lc = [1, 1, 1];
   const anchorIdx = anchors.map((_, i) => {
     // anchors sit on the front strand at fixed positions along the axis
     const target = [-0.33, 0.06, -0.14][i] ?? 0;
@@ -420,6 +522,10 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     // waves
     for (let w = waves.length - 1; w >= 0; w--) if (t - waves[w].t0 > 3.2) waves.splice(w, 1);
 
+    // life builds up after the white sculpture has been seen
+    const grow = LP ? sstep(intro.start + 2.4, intro.start + 9, t) : 0;
+    if (LP) hemi.groundColor.copy(groundGrey).lerp(groundViolet, LP.shadow * grow);
+
     const hb = hovered >= 0 ? inst[hovered] : null;
     for (let i = 0; i < N; i++) {
       const it = inst[i];
@@ -475,7 +581,23 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
       m4.compose(v3, q, sc);
       mesh.setMatrixAt(i, m4);
 
-      if (it.h > 0.002 || swell > 0.002) {
+      if (LP && grow > 0) {
+        // currents flowing along each strand (slow, opposite phase), modulated by a slower tide
+        const c1 = 0.5 + 0.5 * Math.sin(it.s * 0.5 - t * 0.32 + (it.kind === 1 ? 2.2 : it.kind === 2 ? 1.1 : 0));
+        const c2 = 0.5 + 0.5 * Math.sin(it.s * 0.19 + t * 0.09 + 2.1);
+        const flow = c1 * c1 * c1 * c1 * (0.4 + 0.6 * c2);
+        // each sphere breathes on its own clock — cells at work, almost imperceptibly
+        const breathe = 0.72 + 0.28 * Math.sin(t * (0.35 + it.seed * 0.3) + it.seed * 40);
+        let l = flow * (0.5 + 0.5 * it.aff) * breathe * (0.95 + 0.6 * LP.reach);
+        l = Math.max(l, it.aff > 0.86 ? LP.rest * 2.6 : 0); // a few spheres keep a quiet tone of their own
+        l += swell * 0.5; // a touch sends the signal through
+        l = Math.min(1, l) * LP.amt * grow;
+        const b = Math.min(1, 0.86 + it.shade * 0.14 + it.h * 0.1);
+        lifeColor(b, l, lc);
+        const k = Math.min(0.42, it.h * 0.32);
+        mesh.setColorAt(i, col.setRGB(lc[0] + (0.478 - lc[0]) * k, lc[1] + (0.435 - lc[1]) * k, lc[2] + (0.608 - lc[2]) * k));
+        it.lit = true;
+      } else if (it.h > 0.002 || swell > 0.002) {
         const b = Math.min(1, 0.86 + it.shade * 0.14 + it.h * 0.1);
         const k = Math.min(0.42, it.h * 0.32 + swell * 0.55);
         // on a white field brightness alone is invisible: interaction tints toward violet ash #7A6F9B
@@ -490,6 +612,22 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+    // life glow: rides the peaks of the strand-A current, inside the helix
+    if (glows.length && LP) {
+      const k = 0.5, w = 0.32;
+      const n0 = Math.floor(((-L / 2 - 2) * k - t * w - Math.PI / 2) / (Math.PI * 2));
+      glows.forEach((g, gi) => {
+        const n = n0 + Math.floor(gi / 3);
+        const off = ((gi % 3) - 1) * 1.5; // three soft lights per current, spread along the axis
+        const sPeak = (t * w + Math.PI / 2 + Math.PI * 2 * n) / k + off;
+        const edge = sstep(L / 2 + 1, L / 2 - 3, Math.abs(sPeak)); // fade in/out at the ends
+        const tide = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(sPeak * 0.19 + t * 0.09 + 2.1));
+        g.position.set(sPeak, 0, 0);
+        g.scale.setScalar(R * (off ? 1.9 : 2.4) * (0.9 + 0.1 * Math.sin(t * 0.4 + gi)));
+        (g.material as THREE.SpriteMaterial).opacity = LP.glow * grow * edge * tide * (off ? 0.7 : 1);
+      });
+    }
 
     // halo
     const hm = halo.material as THREE.SpriteMaterial;
@@ -566,6 +704,8 @@ export function createHelix({ canvas, section, anchors, onFirstFrame, onInteract
       sphere.dispose();
       mat.dispose();
       haloTex.dispose();
+      glowTex.dispose();
+      glows.forEach((g) => (g.material as THREE.Material).dispose());
       (halo.material as THREE.Material).dispose();
       mesh.dispose();
       looseMesh.dispose();
