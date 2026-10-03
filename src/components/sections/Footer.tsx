@@ -3,7 +3,6 @@
 import { type CSSProperties } from "react";
 import { footer } from "@/content/site";
 import { Reveal } from "@/components/motion/Reveal";
-import { ContactReveal } from "@/components/ui/ContactReveal";
 
 export function Footer() {
   const letters = "STRAND".split("");
@@ -13,14 +12,7 @@ export function Footer() {
         <p className="t-lead col-span-4 max-w-[26ch] md:col-span-3 lg:col-span-4">
           Genetic testing and DNA analysis, read with precision and explained with care.
         </p>
-        {footer.columns.map((col, ci) => col.title === "Contact" ? (
-          <ContactReveal
-            key={col.title}
-            variant="column"
-            label="Contact"
-            className="col-span-2 md:col-span-3 lg:col-span-2"
-          />
-        ) : (
+        {footer.columns.map((col, ci) => (
           <nav
             key={col.title}
             aria-label={col.title}
