@@ -23,6 +23,7 @@
   transform: scale(1.06);
   animation: enter-image 2s var(--ease) 0.1s forwards;
 }
+.cs-cover[data-gl="on"] .cs-cover__img { opacity: 0; transition: opacity 0.8s var(--ease); }
 .cs-cover__mark {
   transform: translate3d(0, calc(var(--p) * -6vh), 0);
 }
